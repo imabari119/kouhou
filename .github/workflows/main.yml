@@ -1,0 +1,35 @@
+name: Download Kyukyu PDF
+
+on:
+  schedule:
+    - cron: '0 2 2 * *'
+  workflow_dispatch:
+
+jobs:
+  download-and-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Get current year and month
+        id: date
+        run: echo "yyyymm=$(date +'%Y%m')" >> $GITHUB_OUTPUT
+
+      - name: Download kyukyu.pdf
+        run: |
+          yyyymm="${{ steps.date.outputs.yyyymm }}"
+          url="https://www.city.imabari.ehime.jp/kouhou/koho/${yyyymm}/kyukyu.pdf"
+          curl -fSL "$url" -o "${yyyymm}.pdf"
+
+      - name: Commit and push if changes exist
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add -N .
+          if ! git diff --exit-code --quiet; then
+            git add *.pdf
+            git commit -m "Add kyukyu PDF for ${{ steps.date.outputs.yyyymm }}"
+            git push
+          fi
